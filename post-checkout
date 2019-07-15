@@ -1,0 +1,12 @@
+#!/bin/bash
+# 2019-07-15 Kyle
+# This is a post-checkout hook. so  .git/hooks/post-checkout with execute bit
+# PWD is always the git repo
+# cache usually holds copies of nwjs, but maybe no copies of nwjs are present...
+mkdir -p cache
+BRANCH=$(git branch 2>/dev/null | grep '^*' | colrm 1 2)
+# Usually you'd start at zero, not with expr....
+HASH=$(expr substr $1 1 8)
+#echo $BRANCH > cache/branch
+echo "{\"gitChangesetId\": \"$BRANCH/$HASH\"}" > cache/version.json
+#echo hook $BRANCH $1 $HASH
