@@ -17,4 +17,5 @@ copy %PULLSRC%\locales\en\messages.json _locales\en\
 robocopy %PULLSRC%\src . /e /XF *.swp
 echo {"gitChangesetId":"%date% %time%"} > version.json
 @echo done pulling from %PULLSRC%
-@pause
+@rem done with pausing for now
+@rem @pause
