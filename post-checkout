@@ -3,10 +3,68 @@
 # This is a post-checkout hook. so  .git/hooks/post-checkout with execute bit
 # PWD is always the git repo
 # $1 previous HEAD, $2 now, aka new HEAD, $3 is a flag if a branch has been changed
-# cache usually holds copies of nwjs, but maybe no copies of nwjs are present...
+# Don't touch the version.json when its just a file being checked out
+[ $3 == 0 ] && exit
+
 BRANCH=$(git branch 2>/dev/null | grep '^*' | colrm 1 2)
 # Usually you'd start at zero, not with expr....
-HASH=$(expr substr $2 1 9)
+# Whoever does the release builds has core.abbrev set to 9
+HASH=$2
+# IN: (HEAD detached at a75a6a75)/a75a6a756
+#OUT: HEAD detached at a75a6a75
+# IN: (HEAD detached at 10.5.1)/7c3c3ef9d
+#OUT: HEAD detached at 10.5.1/7c3c3ef9d <-- got
+#OUT: 10.5.1/7c3c3ef9d
+#OUT: TAG 10.5.1/7c3c3ef9d  <-- maybe want
+
+# This drops the brackets
+if [ ${BRANCH:0:1} == "(" ];then
+  BRANCH=${BRANCH:1:-1}
+fi
+# Cut off "HEAD detached at " if present
+if [ "${BRANCH:0:17}" == "HEAD detached at " ];then
+  BRANCH=${BRANCH:17}
+fi
+
+if [ "$BRANCH" == "FETCH_HEAD" ];then
+  # do nothing for now, come back to it.
+  # For arbitrarily pulling down PR's it might make
+  # more sense to have a script fetch, checkout FETCH_HEAD, write version.json
+  # Right without finishing this section we'll get FETCH_HEAD/commitid
+  FETCH_FILE=".git/FETCH_HEAD"
+  FETCH_HASH=$(cut -f 1 $FETCH_FILE)
+  ## What is the middle value
+  FETCH_LINE=$(cut -f 3 $FETCH_FILE)
+  REF=$(cut -f 2 -d \' $FETCH_LINE)
+  echo $(cut -f 2-3 -d / $REF)
+fi
+
+# The person doing the official release builds has GIT core.abbrev set to 9
+if [ "$BRANCH" == "master" ];then
+  VERSION_STRING="${HASH:0:9}"
+# Better to check a possible 4th word of BRANCH against the hash.
+# This is currently hard coded for a given value of gits core.abbrev
+elif [ "${BRANCH: -8}" == "${HASH:0:8}" ];then
+  VERSION_STRING="$BRANCH"
+else
+  VERSION_STRING="$BRANCH/${HASH:0:9}"
+fi
+#echo $VERSION_STRING $3
+# cache usually holds copies of nwjs, but maybe no copies of nwjs are present...
 mkdir -p cache
-echo "{\"gitChangesetId\": \"$BRANCH/$HASH\"}" > cache/version.json
-#echo hook $BRANCH/$HASH
+echo "{\"gitChangesetId\": \"$VERSION_STRING\"}" > cache/version.json
+#echo -e "{\n  \"gitChangesetId\": \"$VERSION_STRING\",\n  \"FETCH_HASH\": \"$(cut -f 1 .git/FETCH_HEAD)\",\n  \"FETCH_LINE\": \"$(cut -f 3 .git/FETCH_HEAD)\"\n}" > cache/version.json
+#echo hook $BRANCH/$HASH $3
+
+
+# 2019-07-19 short hashes for git are as follows today
+# githubs website:        7 4e7fd3e
+# git 2.17.0 git branch:  8 4e7fd3e2
+# betaflight (gulp dist): 9 7c3c3ef9d
+# CI build has 8 digits. lets look into it.
+# core.abbrev is a variable for this.
+
+# 2019-07-22 Checking out other peoples pull requests can be a bother.
+# git fetch remote refs/pull/1529/head && git checkout FETCH_HEAD
+# Check `git remotes -v` for a list of remotes. Probably origin or upstream
+# "gitChangesetId": "FETCH_HEAD/d947a185e",
