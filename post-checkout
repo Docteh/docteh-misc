@@ -6,7 +6,7 @@
 # Don't touch the version.json when its just a file being checked out
 [ $3 == 0 ] && exit
 
-BRANCH=$(git branch 2>/dev/null | grep '^*' | colrm 1 2)
+BRANCH=$(git branch 2>/dev/null | grep '^*' | cut -b 3-)
 # Usually you'd start at zero, not with expr....
 # Whoever does the release builds has core.abbrev set to 9
 HASH=$2
@@ -35,8 +35,8 @@ if [ "$BRANCH" == "FETCH_HEAD" ];then
   FETCH_HASH=$(cut -f 1 $FETCH_FILE)
   ## What is the middle value
   FETCH_LINE=$(cut -f 3 $FETCH_FILE)
-  REF=$(cut -f 2 -d \' $FETCH_LINE)
-  echo $(cut -f 2-3 -d / $REF)
+  REF=$(echo $FETCH_LINE | cut -f 2 -d \' )
+  BRANCH=$(echo $REF | cut -f 2-3 -d / )
 fi
 
 # The person doing the official release builds has GIT core.abbrev set to 9
@@ -52,8 +52,15 @@ fi
 #echo $VERSION_STRING $3
 # cache usually holds copies of nwjs, but maybe no copies of nwjs are present...
 mkdir -p cache
-echo "{\"gitChangesetId\": \"$VERSION_STRING\"}" > cache/version.json
+#echo "{\"gitChangesetId\": \"$VERSION_STRING\"}" > cache/version.json
 #echo -e "{\n  \"gitChangesetId\": \"$VERSION_STRING\",\n  \"FETCH_HASH\": \"$(cut -f 1 .git/FETCH_HEAD)\",\n  \"FETCH_LINE\": \"$(cut -f 3 .git/FETCH_HEAD)\"\n}" > cache/version.json
+# Start the file
+echo "{" > cache/version.json
+echo "\"hook\": \"post-checkout\"," >> cache/version.json
+PKGVER=$(node -p 'var pkg = require("./package.json");pkg.version;')
+echo "\"version\": \"$PKGVER\"," >> cache/version.json
+# JSON doesn't want a trailing comma, so put the version last, other itemes get a comma
+echo "\"gitChangesetId\": \"$VERSION_STRING\"}" >> cache/version.json
 #echo hook $BRANCH/$HASH $3
 
 
@@ -68,3 +75,8 @@ echo "{\"gitChangesetId\": \"$VERSION_STRING\"}" > cache/version.json
 # git fetch remote refs/pull/1529/head && git checkout FETCH_HEAD
 # Check `git remotes -v` for a list of remotes. Probably origin or upstream
 # "gitChangesetId": "FETCH_HEAD/d947a185e",
+# 2019-07-25 might be worth running down.
+#  "no branch, rebasing jbox/3f899c230",
+# a commit does not trigger this hook, maybe it should?
+# Also it turns out git-bash does not have the colrm command
+# `colrm 1 2` is the same as `cut -b 3-`
