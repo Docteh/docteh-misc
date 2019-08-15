@@ -18,6 +18,7 @@ IF NOT EXIST _locales\en mkdir _locales\en
 copy %PULLSRC%\locales\en\messages.json _locales\en\
 
 robocopy %PULLSRC%\src . /e /XF *.swp
+copy %PULLSRC%\changelog.html tabs
 @rem This goes with a git hook that makes the version.json
 @rem Fallback is just the time this script was ran
 IF EXIST %PULLSRC%\cache\version.json (
