@@ -80,3 +80,5 @@ echo "\"gitChangesetId\": \"$VERSION_STRING\"}" >> cache/version.json
 # a commit does not trigger this hook, maybe it should?
 # Also it turns out git-bash does not have the colrm command
 # `colrm 1 2` is the same as `cut -b 3-`
+# 2019-08-14 rebase to betaflight/master gives this
+# "gitChangesetId": "HEAD detached from refs/heads/master/e513c279a"
